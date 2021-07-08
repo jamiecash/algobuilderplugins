@@ -159,9 +159,7 @@ class MT5DataSource(DataSourceImplementation):
                     # We should now have time and (open, high, low, close, volume) * 2, one for bid and one for ask.
                     # Add period, rename the columns, then delete the first volume column.
                     prices_dataframe.insert(1, 'period', period)
-                    prices_dataframe.columns = ['time', 'period', 'bid_open', 'bid_high', 'bid_low', 'bid_close',
-                                                'bid_volume', 'ask_open', 'ask_high', 'ask_low', 'ask_close',
-                                                'volume']
+                    prices_dataframe.columns = self._prices_columns
                     prices_dataframe.drop('bid_volume', axis=1, inplace=True)  # First volume column
 
                     # Remove n/a
@@ -170,5 +168,12 @@ class MT5DataSource(DataSourceImplementation):
                 except RecursionError as ex:
                     self.__log.warning("Error converting ticks to dataframe and resampling.", ex)
 
-        return prices_dataframe
+        # If the dataframe is None, create an empty one
+        if prices_dataframe is None:
+            prices_dataframe = pd.DataFrame(columns=self._prices_columns)
 
+        # Make time timezone aware. Times returned from MT5 are in UTC
+        if not prices_dataframe.empty:
+            prices_dataframe['time'] = prices_dataframe['time'].dt.tz_localize('UTC')
+
+        return prices_dataframe
