@@ -159,7 +159,8 @@ class MT5DataSource(DataSourceImplementation):
                     # We should now have time and (open, high, low, close, volume) * 2, one for bid and one for ask.
                     # Add period, rename the columns, then delete the first volume column.
                     prices_dataframe.insert(1, 'period', period)
-                    prices_dataframe.columns = self._prices_columns
+                    prices_dataframe.columns = ['time', 'period', 'bid_open', 'bid_high', 'bid_low', 'bid_close',
+                                                'bid_volume', 'ask_open', 'ask_high', 'ask_low', 'ask_close', 'volume']
                     prices_dataframe.drop('bid_volume', axis=1, inplace=True)  # First volume column
 
                     # Remove n/a
