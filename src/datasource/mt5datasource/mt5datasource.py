@@ -12,6 +12,7 @@ class MT5DataSource(DataSourceImplementation):
     """
     MetaTrader 5 DataSource
     """
+
     def __init__(self, data_source_model):
         # Super
         DataSourceImplementation.__init__(self, data_source_model=data_source_model)
@@ -188,7 +189,8 @@ class MT5DataSource(DataSourceImplementation):
 
         return batches
 
-    def __get_rates(self, symbol: str, from_date: datetime, to_date: datetime, period: str,
+    @staticmethod
+    def __get_rates(symbol: str, from_date: datetime, to_date: datetime, period: str,
                     timeframe: int) -> pd.DataFrame:
         """
         Gets rates from MT5, handling batching
@@ -207,18 +209,19 @@ class MT5DataSource(DataSourceImplementation):
         for batch in batches:
             # Get the data
             prices = MetaTrader5.copy_rates_range(symbol, timeframe, batch[0], batch[1])
-            if prices is None or len(prices) == 0:
+            if prices is None:
                 error = MetaTrader5.last_error()
-                self.__log.warning(f"Error retrieving prices for {symbol}: {error}")
-                raise DataNotAvailableException(f"MT5 did not return any prices for {symbol} between {from_date} and "
-                                                f"{to_date} for {period} period. Error: {error}")
+                msg = f"MT5 raised an error when retrieving prices for {symbol} between {from_date} and {to_date} for " \
+                      f"{period} period. Error: {error[0]}: {error[1]}."
+                raise DataNotAvailableException(msg)
             else:
                 # Create or append to dataframe
                 data = pd.DataFrame(prices) if data is None else data.append(pd.DataFrame(prices))
 
         return data
 
-    def __get_ticks(self, symbol: str, from_date: datetime, to_date: datetime, period: str) -> pd.DataFrame:
+    @staticmethod
+    def __get_ticks(symbol: str, from_date: datetime, to_date: datetime, period: str) -> pd.DataFrame:
         """
         Gets ticks from MT5, handling batching
         :param symbol: The symbol to retrieve tick data for
@@ -235,17 +238,14 @@ class MT5DataSource(DataSourceImplementation):
         for batch in batches:
             # Get the data
             ticks = MetaTrader5.copy_ticks_range(symbol, batch[0], batch[1], MetaTrader5.COPY_TICKS_ALL)
-            if ticks is None or len(ticks) == 0:
+            if ticks is None:
                 error = MetaTrader5.last_error()
-                self.__log.warning(f"Error retrieving ticks for {symbol}: {error}")
-                raise DataNotAvailableException(f"MT5 did not return any ticks for {symbol} between {from_date} and "
-                                                f"{to_date} for {period} period. Error{error}")
+                msg = f"MT5 raised an error when retrieving ticks for {symbol} between {from_date} and {to_date} for " \
+                      f"{period} period. Error: {error[0]}: {error[1]}."
+                raise DataNotAvailableException(msg)
             else:
                 # Create or append to dataframe
                 data = pd.DataFrame(ticks) if data is None else data.append(pd.DataFrame(ticks))
 
         return data
-
-
-
 
