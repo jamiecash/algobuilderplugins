@@ -218,6 +218,10 @@ class MT5DataSource(DataSourceImplementation):
                 # Create or append to dataframe
                 data = pd.DataFrame(prices) if data is None else data.append(pd.DataFrame(prices))
 
+        # Remove any duplicates. Datasource can return refreshed candle if end time of previous batch and start time of
+        # current batch is within the same candle period.
+        data = data.drop_duplicates(subset=['time'], keep='last')
+
         return data
 
     @staticmethod
