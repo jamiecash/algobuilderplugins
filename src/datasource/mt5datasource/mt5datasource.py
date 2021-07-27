@@ -211,8 +211,8 @@ class MT5DataSource(DataSourceImplementation):
             prices = MetaTrader5.copy_rates_range(symbol, timeframe, batch[0], batch[1])
             if prices is None:
                 error = MetaTrader5.last_error()
-                msg = f"MT5 raised an error when retrieving prices for {symbol} between {from_date} and {to_date} for " \
-                      f"{period} period. Error: {error[0]}: {error[1]}."
+                msg = f"MT5 raised an error when retrieving prices for {symbol} for {period} period. " \
+                      f"Error: {error[0]}: {error[1]}."
                 raise DataNotAvailableException(msg)
             else:
                 # Create or append to dataframe
@@ -244,8 +244,8 @@ class MT5DataSource(DataSourceImplementation):
             ticks = MetaTrader5.copy_ticks_range(symbol, batch[0], batch[1], MetaTrader5.COPY_TICKS_ALL)
             if ticks is None:
                 error = MetaTrader5.last_error()
-                msg = f"MT5 raised an error when retrieving ticks for {symbol} between {from_date} and {to_date} for " \
-                      f"{period} period. Error: {error[0]}: {error[1]}."
+                msg = f"MT5 raised an error when retrieving ticks for {symbol} for {period} period. " \
+                      f"Error: {error[0]}: {error[1]}."
                 raise DataNotAvailableException(msg)
             else:
                 # Create or append to dataframe
