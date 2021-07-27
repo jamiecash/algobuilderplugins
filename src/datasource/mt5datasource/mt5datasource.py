@@ -100,11 +100,8 @@ class MT5DataSource(DataSourceImplementation):
         # If we have an equivalent timeframe in MT5, get candles, otherwise get ticks and resample
         if timeframe is not None:
             # Get prices from MT5
-            try:
-                prices = self.__get_rates(symbol, from_date, to_date, period, timeframe)
-                self.__log.debug(f"{len(prices)} prices retrieved for {symbol}.")
-            except DataNotAvailableException as ex:
-                raise ex
+            prices = self.__get_rates(symbol, from_date, to_date, period, timeframe)
+            self.__log.debug(f"{len(prices)} prices retrieved for {symbol}.")
 
             # Create dataframe from data and convert time in seconds to datetime format
             prices_dataframe = \
@@ -120,12 +117,9 @@ class MT5DataSource(DataSourceImplementation):
 
             prices_dataframe['time'] = pd.to_datetime(prices_dataframe['time'], unit='s')
         else:
-            try:
-                # Get ticks from MT5
-                ticks = self.__get_ticks(symbol, from_date, to_date, period)
-                self.__log.debug(f"{len(ticks)} ticks retrieved for {symbol}.")
-            except DataNotAvailableException as ex:
-                raise ex
+            # Get ticks from MT5
+            ticks = self.__get_ticks(symbol, from_date, to_date, period)
+            self.__log.debug(f"{len(ticks)} ticks retrieved for {symbol}.")
 
             try:
                 # Create dataframe from data and convert time in seconds to datetime format
@@ -189,8 +183,7 @@ class MT5DataSource(DataSourceImplementation):
 
         return batches
 
-    @staticmethod
-    def __get_rates(symbol: str, from_date: datetime, to_date: datetime, period: str,
+    def __get_rates(self, symbol: str, from_date: datetime, to_date: datetime, period: str,
                     timeframe: int) -> pd.DataFrame:
         """
         Gets rates from MT5, handling batching
@@ -211,9 +204,9 @@ class MT5DataSource(DataSourceImplementation):
             prices = MetaTrader5.copy_rates_range(symbol, timeframe, batch[0], batch[1])
             if prices is None:
                 error = MetaTrader5.last_error()
-                msg = f"MT5 raised an error when retrieving prices for {symbol} for {period} period. " \
-                      f"Error: {error[0]}: {error[1]}."
-                raise DataNotAvailableException(msg)
+                raise DataNotAvailableException(datasource=self._data_source_model.name, symbol=symbol, period=period,
+                                                from_date=from_date, to_date=to_date, error_code=error[0],
+                                                error_message=error[1])
             else:
                 # Create or append to dataframe
                 data = pd.DataFrame(prices) if data is None else data.append(pd.DataFrame(prices))
@@ -224,8 +217,7 @@ class MT5DataSource(DataSourceImplementation):
 
         return data
 
-    @staticmethod
-    def __get_ticks(symbol: str, from_date: datetime, to_date: datetime, period: str) -> pd.DataFrame:
+    def __get_ticks(self, symbol: str, from_date: datetime, to_date: datetime, period: str) -> pd.DataFrame:
         """
         Gets ticks from MT5, handling batching
         :param symbol: The symbol to retrieve tick data for
@@ -244,12 +236,11 @@ class MT5DataSource(DataSourceImplementation):
             ticks = MetaTrader5.copy_ticks_range(symbol, batch[0], batch[1], MetaTrader5.COPY_TICKS_ALL)
             if ticks is None:
                 error = MetaTrader5.last_error()
-                msg = f"MT5 raised an error when retrieving ticks for {symbol} for {period} period. " \
-                      f"Error: {error[0]}: {error[1]}."
-                raise DataNotAvailableException(msg)
+                raise DataNotAvailableException(datasource=self._data_source_model.name, symbol=symbol, period=period,
+                                                from_date=from_date, to_date=to_date, error_code=error[0],
+                                                error_message=error[1])
             else:
                 # Create or append to dataframe
                 data = pd.DataFrame(ticks) if data is None else data.append(pd.DataFrame(ticks))
 
         return data
-
