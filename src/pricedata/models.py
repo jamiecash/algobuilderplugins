@@ -4,7 +4,6 @@ Lightweight model used to test plugins
 
 
 import ast
-import datetime
 import logging
 
 candle_periods = [
@@ -62,3 +61,41 @@ class DataSource:
 
     def __str__(self):
         return f"{self.name}"
+
+
+class Symbol:
+    """
+    A financial Symbol. e.g. GBPUSD
+    """
+    # Name of the symbol.
+    name = ''
+    instrument_type = ''
+
+    def __repr__(self):
+        return f"Symbol(name={self.name}, instrument_type={self.instrument_type})"
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class DataSourceSymbol:
+    """
+    The mapping between data sources and symbols, including a flag to determine whether price data will be retrieved
+    from that datasource for the symbol.
+    """
+
+    datasource = ''
+    symbol = ''
+
+    # Flag to determine whether price data will be retrieved for this datasource / symbol combination
+    retrieve_price_data = True
+
+    # Any broker specific data required for the symbol. Stored as json text.
+    symbol_info = ''
+
+    def __repr__(self):
+        return f"DataSourceSymbol(datasource={self.datasource}, symbol={self.symbol}, " \
+               f"retrieve_price_data={self.retrieve_price_data})"
+
+    def __str__(self):
+        return f"datasource={self.datasource}, symbol={self.symbol}, retrieve_price_data={self.retrieve_price_data}"

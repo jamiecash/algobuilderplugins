@@ -1,3 +1,4 @@
+import json
 import logging
 import pandas as pd
 from datetime import datetime, timedelta
@@ -6,6 +7,7 @@ from typing import List, Dict, Tuple
 import MetaTrader5
 
 from pricedata.datasource import DataSourceImplementation, DataNotAvailableException
+from pricedata import models
 
 
 class MT5DataSource(DataSourceImplementation):
@@ -13,14 +15,12 @@ class MT5DataSource(DataSourceImplementation):
     MetaTrader 5 DataSource
     """
 
+    # Logger
+    __log = logging.getLogger(__name__)
+
     def __init__(self, data_source_model):
         # Super
         DataSourceImplementation.__init__(self, data_source_model=data_source_model)
-
-        # Connect to MetaTrader5. Opens if not already open.
-
-        # Logger
-        self.__log = logging.getLogger(__name__)
 
         # Open MT5 and log error if it could not open
         if not MetaTrader5.initialize():
@@ -37,11 +37,11 @@ class MT5DataSource(DataSourceImplementation):
         # shut down connection to the MetaTrader 5 terminal
         MetaTrader5.shutdown()
 
-    def get_symbols(self) -> List[Dict[str, str]]:
+    def get_symbols(self) -> List[Dict[str, any]]:
         """
         Get symbols from MetaTrader5
 
-        :return: list of dictionaries containing symbol_name and instrument_type
+        :return: list of dictionaries containing symbol_name, instrument_type, digits, spread, and spread_float
         """
 
         all_symbols = MetaTrader5.symbols_get()
@@ -62,7 +62,9 @@ class MT5DataSource(DataSourceImplementation):
                 elif symbol.path.startswith('Forex'):
                     instrument_type = 'FOREX'
 
-                symbols.append({'symbol_name': symbol.name, 'instrument_type': instrument_type})
+                symbols.append({'symbol_name': symbol.name, 'instrument_type': instrument_type,
+                                'spread': symbol.spread, 'digits': symbol.digits, 'spread_float': symbol.spread_float,
+                                'point': symbol.point})
 
         # Log symbol counts
         total_symbols = MetaTrader5.symbols_total()
@@ -103,16 +105,26 @@ class MT5DataSource(DataSourceImplementation):
             prices = self.__get_rates(symbol, from_date, to_date, period, timeframe)
             self.__log.debug(f"{len(prices)} prices retrieved for {symbol}.")
 
+            # We will also need the point and digits from the datasource symbol to calculate the ask, as MT5 only
+            # includes bid on candles. Ask is bid + (bid * price spread * point) rounded to digits
+            datasource = self._data_source_model
+            symbol = models.Symbol.objects.filter(name=symbol)[0]
+            datasource_symbol = models.DataSourceSymbol.objects.filter(datasource=datasource, symbol=symbol)[0]
+            symbol_info = json.loads(datasource_symbol.symbol_info)
+
+            point = symbol_info['point']
+            digits = symbol_info['digits']
+
             # Create dataframe from data and convert time in seconds to datetime format
             prices_dataframe = \
                 pd.DataFrame(columns=self._prices_columns,
                              data={'time': prices['time'], 'period': period, 'bid_open': prices['open'],
                                    'bid_high': prices['high'], 'bid_low': prices['low'],
                                    'bid_close': prices['close'],
-                                   'ask_open': prices['open'] + prices['spread'] / 10000,
-                                   'ask_high': prices['high'] + prices['spread'] / 10000,
-                                   'ask_low': prices['low'] + prices['spread'] / 10000,
-                                   'ask_close': prices['close'] + prices['spread'] / 10000,
+                                   'ask_open': prices['open'] + round((prices['spread'] * point), digits),
+                                   'ask_high': prices['high'] + round((prices['spread'] * point), digits),
+                                   'ask_low': prices['low'] + round((prices['spread'] * point), digits),
+                                   'ask_close': prices['close'] + round((prices['spread'] * point), digits),
                                    'volume': prices['tick_volume']})
 
             prices_dataframe['time'] = pd.to_datetime(prices_dataframe['time'], unit='s')

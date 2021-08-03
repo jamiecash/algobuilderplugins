@@ -1,5 +1,5 @@
 """
-Lightweight DataSourceImplementation base class, contains only the methods required to test the plugins
+The DataSourceImplementation interface. Subclasses will be used to connect to price data sources.
 """
 
 import abc
@@ -8,7 +8,7 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Dict
 
-from pricedata.models import DataSource
+from pricedata import models
 
 
 class PeriodNotImplementedError(Exception):
@@ -18,11 +18,45 @@ class PeriodNotImplementedError(Exception):
     pass
 
 
-class DataNotAvailableException(Exception):
+class DataSourceInstanceNotImplementedError(Exception):
     """
-    An exception that can be raised if data is not available for the specified symbol / timeframe
+    An exception that can be raised by instance if specified datasource is not implemented.
     """
     pass
+
+
+class DataNotAvailableException(Exception):
+    """
+    An exception that can be raised if data is not available for the specified symbol / period / timeframe
+    """
+
+    datasource = None
+    symbol = None
+    period = None
+    from_date = None
+    to_date = None
+    error_code = None
+    error_message = None
+
+    def __init__(self, datasource, symbol, period, from_date, to_date, error_code=None, error_message=None):
+        self.datasource = datasource
+        self.symbol = symbol
+        self.period = period
+        self.from_date = from_date
+        self.to_date = to_date
+        self.error_code = error_code
+        self.error_message = error_message
+
+        msg = f"Data not available from {datasource} for {symbol} between {from_date} and {to_date} for {period} " \
+              f"period."
+
+        if error_code is not None:
+            msg += f" Error code: {error_code}"
+
+        if error_message is not None:
+            msg += f" Error message: {error_message}"
+
+        super().__init__(msg)
 
 
 class DataSourceImplementation:
@@ -41,7 +75,7 @@ class DataSourceImplementation:
     _prices_columns = ['time', 'period', 'bid_open', 'bid_high', 'bid_low', 'bid_close', 'ask_open', 'ask_high',
                        'ask_low', 'ask_close', 'volume']
 
-    def __init__(self, data_source_model: DataSource) -> None:
+    def __init__(self, data_source_model: models.DataSource) -> None:
         """
         Construct the datasource implementation and stores its model
         :param data_source_model: The DataSource model instance containing the details required to create and connect to
@@ -49,12 +83,48 @@ class DataSourceImplementation:
         """
         self._data_source_model = data_source_model
 
+    @staticmethod
+    def instance(name: str):
+        """
+        Get the DataSource instance specified by the name.
+        :param name:
+        :return:
+        """
+
+        datasources = models.DataSource.objects.filter(name=name)
+
+        if len(datasources) != 0:
+            ds = datasources[0]
+
+            # Get plugin class
+            clazz = ds.pluginclass.plugin_class
+        else:
+            raise DataSourceInstanceNotImplementedError(f'DataSourceImplementation instance cannot be created for '
+                                                        f'datasource {name}. Datasource could not be found.')
+
+        return clazz(ds)
+
+    @staticmethod
+    def all_instances():
+        """
+        Returns a list of all DataSources
+        :return:
+        """
+        all_datasource_models = models.DataSource.objects.all()
+
+        all_datasource_implementations = []
+        for datasource_model in all_datasource_models:
+            all_datasource_implementations.append(DataSourceImplementation.instance(datasource_model))
+
+        return all_datasource_implementations
+
     @abc.abstractmethod
-    def get_symbols(self) -> List[Dict[str, str]]:
+    def get_symbols(self) -> List[Dict[str, any]]:
         """
         Get symbols from datasource
 
-        :return: list of dictionaries containing symbol_name and instrument_type
+        :return: list of dictionaries containing symbol_name and instrument_type at a minimum. Dict can also include any
+        other broker specific symbol information required by the implemented datasource.
         """
         raise NotImplementedError
 
