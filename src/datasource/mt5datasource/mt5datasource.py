@@ -6,11 +6,11 @@ from typing import List, Dict, Tuple
 
 import MetaTrader5
 
-from pricedata.datasource import DataSourceImplementation, DataNotAvailableException
+from pricedata import datasource
 from pricedata import models
 
 
-class MT5DataSource(DataSourceImplementation):
+class MT5DataSource(datasource.DataSourceImplementation):
     """
     MetaTrader 5 DataSource
     """
@@ -20,7 +20,7 @@ class MT5DataSource(DataSourceImplementation):
 
     def __init__(self, data_source_model):
         # Super
-        DataSourceImplementation.__init__(self, data_source_model=data_source_model)
+        datasource.DataSourceImplementation.__init__(self, data_source_model=data_source_model)
 
         # Open MT5 and log error if it could not open
         if not MetaTrader5.initialize():
@@ -110,7 +110,8 @@ class MT5DataSource(DataSourceImplementation):
             datasource = self._data_source_model
             symbol = models.Symbol.objects.filter(name=symbol)[0]
             datasource_symbol = models.DataSourceSymbol.objects.filter(datasource=datasource, symbol=symbol)[0]
-            symbol_info = json.loads(datasource_symbol.symbol_info)
+            json_symbol_info = datasource_symbol.symbol_info
+            symbol_info = json.loads(json_symbol_info)
 
             point = symbol_info['point']
             digits = symbol_info['digits']
@@ -216,9 +217,9 @@ class MT5DataSource(DataSourceImplementation):
             prices = MetaTrader5.copy_rates_range(symbol, timeframe, batch[0], batch[1])
             if prices is None:
                 error = MetaTrader5.last_error()
-                raise DataNotAvailableException(datasource=self._data_source_model.name, symbol=symbol, period=period,
-                                                from_date=from_date, to_date=to_date, error_code=error[0],
-                                                error_message=error[1])
+                raise datasource.DataNotAvailableException(datasource=self._data_source_model.name, symbol=symbol,
+                                                           period=period, from_date=from_date, to_date=to_date,
+                                                           error_code=error[0], error_message=error[1])
             else:
                 # Create or append to dataframe
                 data = pd.DataFrame(prices) if data is None else data.append(pd.DataFrame(prices))
@@ -248,9 +249,9 @@ class MT5DataSource(DataSourceImplementation):
             ticks = MetaTrader5.copy_ticks_range(symbol, batch[0], batch[1], MetaTrader5.COPY_TICKS_ALL)
             if ticks is None:
                 error = MetaTrader5.last_error()
-                raise DataNotAvailableException(datasource=self._data_source_model.name, symbol=symbol, period=period,
-                                                from_date=from_date, to_date=to_date, error_code=error[0],
-                                                error_message=error[1])
+                raise datasource.DataNotAvailableException(datasource=self._data_source_model.name, symbol=symbol,
+                                                           period=period, from_date=from_date, to_date=to_date,
+                                                           error_code=error[0], error_message=error[1])
             else:
                 # Create or append to dataframe
                 data = pd.DataFrame(ticks) if data is None else data.append(pd.DataFrame(ticks))
