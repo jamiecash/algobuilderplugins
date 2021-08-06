@@ -17,13 +17,13 @@ class TestMT5DataSource(unittest.TestCase):
     # Logger
     __log = logging.getLogger(__name__)
 
-    @patch('pricedata.datasource.DataSourceImplementation._data_source_model')
+    @patch('pricedata.datasource.DataSourceImplementation._datasource')
     def test_get_symbols(self, mock):
         # Mock the datasource models connection_params response. MT5 is testing for market_watch_only. We will return
         # True.
         mock.get_connection_param.return_value = True
 
-        symbols = MT5DataSource(data_source_model=mock).get_symbols()
+        symbols = MT5DataSource(datasource=mock).get_symbols()
         self.assertTrue(len(symbols) > 0, "No symbols were returned.")
 
     @patch('pricedata.models.DataSourceSymbol.objects')
@@ -41,11 +41,11 @@ class TestMT5DataSource(unittest.TestCase):
         to_date = datetime(2021, 7, 6, 19, 0, 0)
 
         # 1M candles, should use copy_rates_range api
-        prices = MT5DataSource(data_source_model=DataSource()).get_prices('GBPUSD', from_date, to_date, '1M')
+        prices = MT5DataSource(datasource=DataSource()).get_prices('GBPUSD', from_date, to_date, '1M')
         self.assertTrue(len(prices) > 0, "No prices were returned for 1M period.")
 
         # 1S candles, should use copy_ticks_range api
-        prices = MT5DataSource(data_source_model=DataSource()).get_prices('GBPUSD', from_date, to_date, '1S')
+        prices = MT5DataSource(datasource=DataSource()).get_prices('GBPUSD', from_date, to_date, '1S')
         self.assertTrue(len(prices) > 0, "No prices were returned for 1S period.")
 
     def test_historic(self):

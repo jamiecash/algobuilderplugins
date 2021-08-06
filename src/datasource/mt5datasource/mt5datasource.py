@@ -6,11 +6,11 @@ from typing import List, Dict, Tuple
 
 import MetaTrader5
 
-from pricedata import datasource
+from pricedata import datasource as ds
 from pricedata import models
 
 
-class MT5DataSource(datasource.DataSourceImplementation):
+class MT5DataSource(ds.DataSourceImplementation):
     """
     MetaTrader 5 DataSource
     """
@@ -18,9 +18,9 @@ class MT5DataSource(datasource.DataSourceImplementation):
     # Logger
     __log = logging.getLogger(__name__)
 
-    def __init__(self, data_source_model):
+    def __init__(self, datasource):
         # Super
-        datasource.DataSourceImplementation.__init__(self, data_source_model=data_source_model)
+        ds.DataSourceImplementation.__init__(self, datasource=datasource)
 
         # Open MT5 and log error if it could not open
         if not MetaTrader5.initialize():
@@ -47,7 +47,7 @@ class MT5DataSource(datasource.DataSourceImplementation):
         all_symbols = MetaTrader5.symbols_get()
 
         # Are we returning MarketWatch symbols only
-        market_watch_only = self._data_source_model.get_connection_param('market_watch_only')
+        market_watch_only = self._datasource.get_connection_param('market_watch_only')
 
         # We are returning the symbol names and instrument types
         symbols = []
@@ -107,7 +107,7 @@ class MT5DataSource(datasource.DataSourceImplementation):
 
             # We will also need the point and digits from the datasource symbol to calculate the ask, as MT5 only
             # includes bid on candles. Ask is bid + (bid * price spread * point) rounded to digits
-            datasource = self._data_source_model
+            datasource = self._datasource
             symbol = models.Symbol.objects.filter(name=symbol)[0]
             datasource_symbol = models.DataSourceSymbol.objects.filter(datasource=datasource, symbol=symbol)[0]
             json_symbol_info = datasource_symbol.symbol_info
@@ -217,9 +217,9 @@ class MT5DataSource(datasource.DataSourceImplementation):
             prices = MetaTrader5.copy_rates_range(symbol, timeframe, batch[0], batch[1])
             if prices is None:
                 error = MetaTrader5.last_error()
-                raise datasource.DataNotAvailableException(datasource=self._data_source_model.name, symbol=symbol,
-                                                           period=period, from_date=from_date, to_date=to_date,
-                                                           error_code=error[0], error_message=error[1])
+                raise ds.DataNotAvailableException(datasource=self._datasource.name, symbol=symbol,
+                                                   period=period, from_date=from_date, to_date=to_date,
+                                                   error_code=error[0], error_message=error[1])
             else:
                 # Create or append to dataframe
                 data = pd.DataFrame(prices) if data is None else data.append(pd.DataFrame(prices))
@@ -249,9 +249,9 @@ class MT5DataSource(datasource.DataSourceImplementation):
             ticks = MetaTrader5.copy_ticks_range(symbol, batch[0], batch[1], MetaTrader5.COPY_TICKS_ALL)
             if ticks is None:
                 error = MetaTrader5.last_error()
-                raise datasource.DataNotAvailableException(datasource=self._data_source_model.name, symbol=symbol,
-                                                           period=period, from_date=from_date, to_date=to_date,
-                                                           error_code=error[0], error_message=error[1])
+                raise ds.DataNotAvailableException(datasource=self._datasource.name, symbol=symbol,
+                                                   period=period, from_date=from_date, to_date=to_date,
+                                                   error_code=error[0], error_message=error[1])
             else:
                 # Create or append to dataframe
                 data = pd.DataFrame(ticks) if data is None else data.append(pd.DataFrame(ticks))
