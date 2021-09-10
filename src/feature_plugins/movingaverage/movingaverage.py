@@ -2,6 +2,7 @@ import logging
 
 from algobuilder.utils import DatabaseUtility
 from feature import feature as ft
+from feature import models
 
 
 class MovingAverage(ft.FeatureImplementation):
