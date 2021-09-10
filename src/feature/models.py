@@ -9,5 +9,11 @@ class FeatureExecution(models.Model):
     objects = None
 
 
-class FeatureExecutionSymbol(models.Model):
+class FeatureExecutionDataSourceSymbol(models.Model):
     objects = None
+
+
+class FeatureExecutionResult(models.Model):
+    objects = None
+
+

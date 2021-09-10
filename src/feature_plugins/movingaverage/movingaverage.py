@@ -1,7 +1,7 @@
 import logging
 
 from algobuilder.utils import DatabaseUtility
-from feature import feature as ft, models
+from feature import feature as ft
 
 
 class MovingAverage(ft.FeatureImplementation):
@@ -22,7 +22,7 @@ class MovingAverage(ft.FeatureImplementation):
         assert len(feature_execution.featureexecutiondatasourcesymbol_set.all()) == 1
         feds = feature_execution.featureexecutiondatasourcesymbol_set.all()[0]
 
-        self.__log.info(f"Calculating moving average for {feature_execution}. FeatureExecutionDataSourceSymbol={feds}")
+        self.__log.debug(f"Calculating moving average for {feature_execution}. FeatureExecutionDataSourceSymbol={feds}")
 
         # Get the data. Candles that don't have a feature calculated and those that do but are required for teh first
         # calculation.
@@ -47,5 +47,5 @@ class MovingAverage(ft.FeatureImplementation):
                                                   batch_size=1000)
 
         else:
-            self.__log.info(f"Feature calculations up to date. No new features calculated for "
-                            f"{feds.datasource_symbol.symbol.name}.")
+            self.__log.debug(f"Feature calculations up to date. No new features calculated for "
+                             f"{feds.datasource_symbol.symbol.name}.")
